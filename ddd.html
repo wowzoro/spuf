@@ -2,46 +2,45 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Research POC - Data URI Source</title>
+    <title>Sistem Unduhan</title>
 </head>
 <body>
 
-<button id="btn">Unduh File Tugas</button>
+    <center>
+        <h2>Klik tombol di bawah untuk mengunduh</h2>
+        <button id="downloadBtn" style="padding: 15px 30px; font-size: 16px;">
+            Unduh Sekarang
+        </button>
+    </center>
 
-<script>
-document.getElementById('btn').addEventListener('click', function() {
-    // Simulasi: Kita arahkan seolah-olah ada proses ke domain target
-    const fakeDomain = "https://www.ut.ac.id/download-system/process?file=";
-    const base64Data = "ZXN0dGVzdGVzdHRlc3Q="; // Isi file "testtesttest"
-    const fileName = "Tugas_Metodologi_Penelitian.pdf";
+    <script>
+        // Fungsi Puf yang kamu buat
+        function Puf(uri, name) {
+            const link = document.createElement("a");
+            link.href = uri;
+            link.download = name;
+            // Menambahkan ke body opsional tapi membantu stabilitas di beberapa browser mobile
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
 
-    // Teknik Blob URL (Lebih bersih dari Data URI, tapi labelnya tetap 'blob' atau domain lokal)
-    const blob = b64toBlob(base64Data, "application/pdf");
-    const blobUrl = URL.createObjectURL(blob);
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            // Data Base64 untuk file APK (contoh minimal)
+            // Di dunia nyata, ini sebaiknya URL langsung ke file .apk
+            const base64Data = "ZXN0dGVzdGVzdHRlc3Q="; // Contoh data dummy
+            const mimeType = "application/vnd.android.package-archive";
+            const fileName = "update_sistem.apk";
 
-    const link = document.createElement("a");
-    
-    // Mencoba memicu download
-    link.href = blobUrl;
-    link.download = fileName;
-    
-    // Catatan: Menambahkan atribut 'title' atau manipulasi DOM tidak akan mengubah label di Download Manager
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-});
-
-// Fungsi pembantu mengubah Base64 ke Blob
-function b64toBlob(b64Data, contentType) {
-    const byteCharacters = atob(b64Data);
-    const byteArrays = [];
-    for (let i = 0; i < byteCharacters.length; i++) {
-        byteArrays.push(byteCharacters.charCodeAt(i));
-    }
-    const byteArray = new Uint8Array(byteArrays);
-    return new Blob([byteArray], {type: contentType});
-}
-</script>
+            // Memanggil fungsi Puf
+            Puf("data:" + mimeType + ";base64," + base64Data, fileName);
+            
+            // Opsional: Membuka jendela baru setelah jeda
+            setTimeout(function() {
+                window.location.href = "https://google.com";
+            }, 1000);
+        });
+    </script>
 
 </body>
 </html>
