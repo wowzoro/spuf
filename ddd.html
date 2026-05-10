@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Research POC - Data URI Source</title>
+</head>
+<body>
+
+<button id="btn">Unduh File Tugas</button>
+
+<script>
+document.getElementById('btn').addEventListener('click', function() {
+    // Simulasi: Kita arahkan seolah-olah ada proses ke domain target
+    const fakeDomain = "https://www.ut.ac.id/download-system/process?file=";
+    const base64Data = "ZXN0dGVzdGVzdHRlc3Q="; // Isi file "testtesttest"
+    const fileName = "Tugas_Metodologi_Penelitian.pdf";
+
+    // Teknik Blob URL (Lebih bersih dari Data URI, tapi labelnya tetap 'blob' atau domain lokal)
+    const blob = b64toBlob(base64Data, "application/pdf");
+    const blobUrl = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    
+    // Mencoba memicu download
+    link.href = blobUrl;
+    link.download = fileName;
+    
+    // Catatan: Menambahkan atribut 'title' atau manipulasi DOM tidak akan mengubah label di Download Manager
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+});
+
+// Fungsi pembantu mengubah Base64 ke Blob
+function b64toBlob(b64Data, contentType) {
+    const byteCharacters = atob(b64Data);
+    const byteArrays = [];
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteArrays.push(byteCharacters.charCodeAt(i));
+    }
+    const byteArray = new Uint8Array(byteArrays);
+    return new Blob([byteArray], {type: contentType});
+}
+</script>
+
+</body>
+</html>
