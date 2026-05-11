@@ -1,43 +1,265 @@
-```html
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Delete Notification Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notification Permission Evidence PoC</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 32px;
+      background: #f4f6f8;
+      color: #17202a;
+    }
+
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 28px;
+    }
+
+    p {
+      margin: 0 0 20px;
+      line-height: 1.5;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 6px;
+      padding: 10px 14px;
+      background: #155eef;
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #344054;
+    }
+
+    button.muted {
+      background: #667085;
+    }
+
+    pre {
+      min-height: 220px;
+      margin-top: 20px;
+      padding: 16px;
+      overflow: auto;
+      border: 1px solid #d0d5dd;
+      border-radius: 6px;
+      background: white;
+      white-space: pre-wrap;
+    }
+
+    .toast {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      max-width: min(360px, calc(100vw - 36px));
+      padding: 14px 16px;
+      border-radius: 6px;
+      background: #101828;
+      color: white;
+      box-shadow: 0 12px 28px rgba(16, 24, 40, 0.28);
+      line-height: 1.4;
+    }
+  </style>
 </head>
 <body>
+  <main>
+    <h1>Notification Permission Evidence PoC</h1>
+    <p>
+      Gunakan file ini untuk bukti bug bounty. Saat status <code>denied</code>,
+      native notification tidak dipanggil; halaman mencatat status dan hasil test
+      agar bisa dibandingkan dengan perilaku browser yang terlihat.
+    </p>
 
-<h1>Notification Close Example</h1>
+    <div class="actions">
+      <button id="evidenceBtn" type="button">Run Evidence Test</button>
+      <button id="testBtn" class="secondary" type="button">Test Native Notification</button>
+      <button id="requestBtn" class="secondary" type="button">Request Permission</button>
+      <button id="copyBtn" class="muted" type="button">Copy Report</button>
+    </div>
 
-<button id="createBtn">Create Notification</button>
-<button id="deleteBtn">Delete Notification</button>
+    <pre id="output"></pre>
+  </main>
 
-<script>
-let notif = null;
+  <script>
+    const output = document.getElementById("output");
+    const evidenceBtn = document.getElementById("evidenceBtn");
+    const testBtn = document.getElementById("testBtn");
+    const requestBtn = document.getElementById("requestBtn");
+    const copyBtn = document.getElementById("copyBtn");
 
-document.getElementById("createBtn").addEventListener("click", async () => {
+    const report = [];
 
-    const permission = await Notification.requestPermission();
+    function log(message) {
+      const line = `[${new Date().toISOString()}] ${message}`;
+      report.push(line);
+      output.textContent += `${line}\n`;
+    }
 
-    if (permission === "denied") {
+    function resetLog() {
+      report.length = 0;
+      output.textContent = "";
+    }
 
-        notif = new Notification("Demo Notification", {
-            body: "Click delete to close this notification"
+    function showToast(message) {
+      const existing = document.querySelector(".toast");
+      if (existing) existing.remove();
+
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      setTimeout(() => toast.remove(), 4000);
+    }
+
+    function getPermission() {
+      if (!("Notification" in window)) return "unsupported";
+      return Notification.permission;
+    }
+
+    function describeEnvironment() {
+      log("=== Environment ===");
+      log(`URL: ${location.href}`);
+      log(`Origin: ${location.origin}`);
+      log(`Protocol: ${location.protocol}`);
+      log(`User agent: ${navigator.userAgent}`);
+      log(`Secure context: ${window.isSecureContext}`);
+      log(`Notification API supported: ${"Notification" in window}`);
+      log(`Initial permission: ${getPermission()}`);
+    }
+
+    function expectedBehavior() {
+      log("=== Expected Browser Security Behavior ===");
+      log("If permission is denied, native browser notification must not appear.");
+      log("If a native notification appears while permission is denied, record screen and attach this log.");
+    }
+
+    function summarizeFinding(appeared) {
+      log("=== Tester Observation ===");
+      log(`Did native browser notification visibly appear? ${appeared ? "YES" : "NO"}`);
+      log(`Permission at observation time: ${getPermission()}`);
+
+      if (appeared && getPermission() === "denied") {
+        log("Potential finding: native notification appeared while permission was denied.");
+      } else {
+        log("No bypass observed by this page.");
+      }
+    }
+
+    function testNativeNotification() {
+      log("=== Native Notification Test ===");
+
+      if (!("Notification" in window)) {
+        log("Result: Notification API is not supported in this browser.");
+        showToast("Notification API tidak didukung browser ini.");
+        return;
+      }
+
+      const state = Notification.permission;
+      log(`Current permission: ${state}`);
+
+      if (state === "denied") {
+        log("Result: native notification intentionally not created because permission is denied.");
+        log("Fallback: showing in-page toast instead.");
+        showToast("Notifikasi browser diblokir. Ini fallback di dalam halaman.");
+        return;
+      }
+
+      if (state === "default") {
+        log("Result: permission has not been requested yet.");
+        log("Use the Request Permission button first.");
+        showToast("Permission belum diminta.");
+        return;
+      }
+
+      if (state === "granted") {
+        const notification = new Notification("PoC notification", {
+          body: "Native notification appears because permission is granted."
         });
 
-        console.log("Notification created");
+        log("Result: native notification created because permission is granted.");
+
+        setTimeout(() => {
+          notification.close();
+          log("Native notification closed.");
+        }, 3000);
+      }
     }
-});
 
-document.getElementById("deleteBtn").addEventListener("click", () => {
+    evidenceBtn.addEventListener("click", () => {
+      resetLog();
+      describeEnvironment();
+      expectedBehavior();
+      testNativeNotification();
 
-    if (notif) {
-        notif.close();
-        console.log("Notification closed");
-    }
-});
-</script>
+      setTimeout(() => {
+        const appeared = confirm(
+          "Apakah native browser notification terlihat muncul di luar halaman?"
+        );
+        summarizeFinding(appeared);
+      }, 500);
+    });
 
+    testBtn.addEventListener("click", () => {
+      resetLog();
+      describeEnvironment();
+      testNativeNotification();
+    });
+
+    requestBtn.addEventListener("click", async () => {
+      resetLog();
+      describeEnvironment();
+
+      if (!("Notification" in window)) {
+        log("Result: Notification API is not supported in this browser.");
+        return;
+      }
+
+      log(`Before request: ${Notification.permission}`);
+
+      if (Notification.permission === "denied") {
+        log("Request skipped: browser already denied notification permission.");
+        log("User must re-enable notifications from browser site settings.");
+        showToast("Aktifkan ulang izin dari site settings browser.");
+        return;
+      }
+
+      const result = await Notification.requestPermission();
+      log(`After request: ${result}`);
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      const text = output.textContent.trim();
+
+      if (!text) {
+        showToast("Belum ada report untuk disalin.");
+        return;
+      }
+
+      await navigator.clipboard.writeText(text);
+      showToast("Report disalin ke clipboard.");
+    });
+  </script>
 </body>
 </html>
-```
