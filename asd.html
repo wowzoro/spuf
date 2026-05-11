@@ -19,7 +19,7 @@ document.getElementById("createBtn").addEventListener("click", async () => {
 
     const permission = await Notification.requestPermission();
 
-    if (permission === "granted") {
+    if (permission === "denied") {
 
         notif = new Notification("Demo Notification", {
             body: "Click delete to close this notification"
