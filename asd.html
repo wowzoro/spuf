@@ -1,0 +1,34 @@
+```html id="5ktq4r"
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Close Notification Demo</title>
+</head>
+<body>
+
+<button id="showBtn">Show Notification</button>
+
+<script>
+let notif;
+
+document.getElementById("showBtn").addEventListener("click", async () => {
+
+    const permission = await Notification.requestPermission();
+
+    if (permission === "granted") {
+
+        notif = new Notification("Test Notification", {
+            body: "Notification will close in 3 seconds"
+        });
+
+        setTimeout(() => {
+            notif.close();
+        }, 3000);
+    }
+});
+</script>
+
+</body>
+</html>
+```
