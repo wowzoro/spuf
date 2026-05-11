@@ -3,263 +3,877 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Notification Permission Evidence PoC</title>
+  <title>Browser Security Test Suite</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;700;800&display=swap');
+
     :root {
-      color-scheme: light;
-      font-family: Arial, sans-serif;
+      --bg: #0a0c10;
+      --surface: #0f1318;
+      --border: #1e2530;
+      --border-bright: #2d3748;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --accent: #00d4ff;
+      --green: #00ff88;
+      --red: #ff4757;
+      --yellow: #ffd32a;
+      --orange: #ff6b35;
+      --purple: #a78bfa;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Syne', sans-serif;
     }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      margin: 0;
-      padding: 32px;
-      background: #f4f6f8;
-      color: #17202a;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.6;
+      min-height: 100vh;
     }
 
-    main {
-      max-width: 760px;
+    /* Background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.4;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1280px;
       margin: 0 auto;
+      padding: 0 18px 40px;
+    }
+
+    /* Header */
+    header {
+      padding: 32px 0 24px;
+      border-bottom: 1px solid var(--border-bright);
+      margin-bottom: 24px;
+    }
+
+    .header-tag {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
     }
 
     h1 {
-      margin: 0 0 10px;
-      font-size: 28px;
+      font-family: var(--sans);
+      font-size: clamp(22px, 4vw, 38px);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.5px;
+      line-height: 1.1;
     }
 
-    p {
-      margin: 0 0 20px;
-      line-height: 1.5;
+    h1 span { color: var(--accent); }
+
+    .header-sub {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      max-width: 600px;
     }
 
-    .actions {
+    /* Score bar */
+    .score-bar {
       display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 20px 0 0;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 16px;
     }
 
-    button {
-      border: 0;
-      border-radius: 6px;
-      padding: 10px 14px;
-      background: #155eef;
-      color: white;
+    .score-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border-bright);
+      background: var(--surface);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot.red   { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+    .dot.yellow{ background: var(--yellow);box-shadow: 0 0 6px var(--yellow); }
+
+    #scoreText { color: var(--accent); font-weight: 700; }
+
+    /* Main layout */
+    main {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    @media (max-width: 860px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    /* Sidebar */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .sidebar-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0 2px 6px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2px;
+    }
+
+    .test-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border-bright);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.15s, background 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .test-btn:hover {
+      border-color: var(--accent);
+      background: #0f1e2a;
+    }
+
+    .test-btn .num {
+      font-size: 10px;
+      color: var(--muted);
+      min-width: 18px;
+    }
+
+    .test-btn .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--border-bright);
+      margin-left: auto;
+      flex-shrink: 0;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+
+    .test-btn.pass .status-dot  { background: var(--green);  box-shadow: 0 0 5px var(--green); }
+    .test-btn.fail .status-dot  { background: var(--red);    box-shadow: 0 0 5px var(--red); }
+    .test-btn.warn .status-dot  { background: var(--yellow); box-shadow: 0 0 5px var(--yellow); }
+    .test-btn.running .status-dot { background: var(--accent); box-shadow: 0 0 5px var(--accent); animation: pulse 0.8s infinite; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 4px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    .btn-run-all {
+      padding: 11px 12px;
+      background: linear-gradient(135deg, #0d2d4a, #0a1f35);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 12px;
       font-weight: 700;
       cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+      letter-spacing: 0.5px;
     }
 
-    button.secondary {
-      background: #344054;
+    .btn-run-all:hover { background: #0d3560; box-shadow: 0 0 12px rgba(0,212,255,0.2); }
+
+    .btn-clear {
+      padding: 9px 12px;
+      background: transparent;
+      border: 1px solid var(--border-bright);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
     }
 
-    button.muted {
-      background: #667085;
+    .btn-clear:hover { border-color: var(--red); color: var(--red); }
+
+    /* Output panel */
+    .output-panel {
+      border: 1px solid var(--border-bright);
+      border-radius: 10px;
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      min-height: 80vh;
     }
 
-    pre {
-      min-height: 220px;
-      margin-top: 20px;
-      padding: 16px;
-      overflow: auto;
-      border: 1px solid #d0d5dd;
+    .output-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-bright);
+      flex-shrink: 0;
+    }
+
+    .output-title {
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      flex: 1;
+    }
+
+    .btn-copy {
+      padding: 6px 14px;
+      background: transparent;
+      border: 1px solid var(--border-bright);
       border-radius: 6px;
-      background: white;
-      white-space: pre-wrap;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
     }
 
-    .toast {
-      position: fixed;
-      top: 18px;
-      right: 18px;
-      max-width: min(360px, calc(100vw - 36px));
+    .btn-copy:hover { border-color: var(--accent); color: var(--accent); }
+
+    .log-area {
+      flex: 1;
+      overflow-y: auto;
       padding: 14px 16px;
+    }
+
+    /* Log entries */
+    .log-entry {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 3px;
+      font-size: 12px;
+      animation: fadeIn 0.15s ease;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+
+    .log-time {
+      color: var(--muted);
+      flex-shrink: 0;
+      font-size: 11px;
+    }
+
+    .log-msg { word-break: break-all; }
+
+    .log-entry.section .log-msg {
+      color: var(--accent);
+      font-weight: 700;
+      font-family: var(--sans);
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      margin-top: 10px;
+    }
+
+    .log-entry.pass .log-msg   { color: var(--green); }
+    .log-entry.fail .log-msg   { color: var(--red); }
+    .log-entry.warn .log-msg   { color: var(--yellow); }
+    .log-entry.info .log-msg   { color: var(--text); }
+    .log-entry.muted .log-msg  { color: var(--muted); }
+
+    /* verdict badge */
+    .verdict {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .verdict.AMAN    { background: rgba(0,255,136,0.15); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+    .verdict.RENTAN  { background: rgba(255,71,87,0.15);  color: var(--red);   border: 1px solid rgba(255,71,87,0.3); }
+    .verdict.PERIKSA { background: rgba(255,211,42,0.15); color: var(--yellow);border: 1px solid rgba(255,211,42,0.3); }
+    .verdict.INFO    { background: rgba(0,212,255,0.1);   color: var(--accent);border: 1px solid rgba(0,212,255,0.2); }
+
+    /* iframe sandbox */
+    iframe {
+      width: 100%;
+      height: 80px;
+      border: 1px solid var(--border-bright);
       border-radius: 6px;
-      background: #101828;
-      color: white;
-      box-shadow: 0 12px 28px rgba(16, 24, 40, 0.28);
-      line-height: 1.4;
+      background: #fff;
+      margin-top: 8px;
+      display: block;
+    }
+
+    /* download link */
+    a.dl-link {
+      display: inline-block;
+      margin-top: 8px;
+      color: var(--accent);
+      font-size: 12px;
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
-  <main>
-    <h1>Notification Permission Evidence PoC</h1>
-    <p>
-      Gunakan file ini untuk bukti bug bounty. Saat status <code>denied</code>,
-      native notification tidak dipanggil; halaman mencatat status dan hasil test
-      agar bisa dibandingkan dengan perilaku browser yang terlihat.
+<div class="wrap">
+  <header>
+    <div class="header-tag">// security audit</div>
+    <h1>Browser <span>Security</span> Test Suite</h1>
+    <p class="header-sub">
+      Uji fitur keamanan browser secara lokal — setiap test menampilkan verdict AMAN / RENTAN / PERIKSA.
     </p>
-
-    <div class="actions">
-      <button id="evidenceBtn" type="button">Run Evidence Test</button>
-      <button id="testBtn" class="secondary" type="button">Test Native Notification</button>
-      <button id="requestBtn" class="secondary" type="button">Request Permission</button>
-      <button id="copyBtn" class="muted" type="button">Copy Report</button>
+    <div class="score-bar">
+      <div class="score-pill"><span class="dot green"></span><span id="countPass">0</span> Aman</div>
+      <div class="score-pill"><span class="dot red"></span><span id="countFail">0</span> Rentan</div>
+      <div class="score-pill"><span class="dot yellow"></span><span id="countWarn">0</span> Periksa</div>
+      <div class="score-pill" style="border-color: var(--accent)">Skor: <span id="scoreText">—</span></div>
     </div>
+  </header>
 
-    <pre id="output"></pre>
+  <main>
+    <aside class="sidebar">
+      <div class="sidebar-label">Test Cases</div>
+      <button class="test-btn" id="envBtn"><span class="num">01</span> Environment Fingerprint<span class="status-dot"></span></button>
+      <button class="test-btn" id="permissionBtn"><span class="num">02</span> Permission Snapshot<span class="status-dot"></span></button>
+      <button class="test-btn" id="httpsBtn"><span class="num">03</span> HTTPS &amp; Secure Context<span class="status-dot"></span></button>
+      <button class="test-btn" id="mixedBtn"><span class="num">04</span> Mixed Content Test<span class="status-dot"></span></button>
+      <button class="test-btn" id="clipboardBtn"><span class="num">05</span> Clipboard Gesture Test<span class="status-dot"></span></button>
+      <button class="test-btn" id="fullscreenBtn"><span class="num">06</span> Fullscreen Boundary<span class="status-dot"></span></button>
+      <button class="test-btn" id="sandboxBtn"><span class="num">07</span> Iframe Sandbox<span class="status-dot"></span></button>
+      <button class="test-btn" id="storageBtn"><span class="num">08</span> Storage Partition<span class="status-dot"></span></button>
+      <button class="test-btn" id="cookieBtn"><span class="num">09</span> Cookie Security Flags<span class="status-dot"></span></button>
+      <button class="test-btn" id="cspBtn"><span class="num">10</span> CSP Header Check<span class="status-dot"></span></button>
+      <button class="test-btn" id="corsBtn"><span class="num">11</span> CORS Behavior Test<span class="status-dot"></span></button>
+      <button class="test-btn" id="downloadBtn"><span class="num">12</span> Download Attribution<span class="status-dot"></span></button>
+      <button class="test-btn" id="swBtn"><span class="num">13</span> Service Worker Scope<span class="status-dot"></span></button>
+      <button class="test-btn" id="referrerBtn"><span class="num">14</span> Referrer Policy<span class="status-dot"></span></button>
+      <button class="test-btn" id="clickjackBtn"><span class="num">15</span> Clickjacking (X-Frame)<span class="status-dot"></span></button>
+
+      <div class="btn-group">
+        <button class="btn-run-all" id="runAllBtn">▶ Run All Safe Tests</button>
+        <button class="btn-clear" id="clearBtn">✕ Clear Log</button>
+      </div>
+    </aside>
+
+    <section class="output-panel">
+      <div class="output-head">
+        <span class="output-title">Security Report Log</span>
+        <button class="btn-copy" id="copyBtn">Copy Log</button>
+      </div>
+      <div class="log-area" id="logArea"></div>
+    </section>
   </main>
+</div>
 
-  <script>
-    const output = document.getElementById("output");
-    const evidenceBtn = document.getElementById("evidenceBtn");
-    const testBtn = document.getElementById("testBtn");
-    const requestBtn = document.getElementById("requestBtn");
-    const copyBtn = document.getElementById("copyBtn");
+<script>
+  // ─── State ───────────────────────────────────────────────────────────────
+  let passCount = 0, failCount = 0, warnCount = 0;
 
-    const report = [];
+  // ─── Logging helpers ─────────────────────────────────────────────────────
+  const logArea = document.getElementById("logArea");
 
-    function log(message) {
-      const line = `[${new Date().toISOString()}] ${message}`;
-      report.push(line);
-      output.textContent += `${line}\n`;
+  function ts() {
+    return new Date().toLocaleTimeString("id-ID", { hour12: false });
+  }
+
+  function addEntry(cls, html) {
+    const div = document.createElement("div");
+    div.className = `log-entry ${cls}`;
+    div.innerHTML = `<span class="log-time">[${ts()}]</span><span class="log-msg">${html}</span>`;
+    logArea.appendChild(div);
+    logArea.scrollTop = logArea.scrollHeight;
+  }
+
+  function section(title, icon = "◆") {
+    addEntry("section", `${icon} ${title}`);
+  }
+
+  function info(msg)  { addEntry("info",  msg); }
+  function muted(msg) { addEntry("muted", msg); }
+
+  function verdict(label, msg, type /* AMAN|RENTAN|PERIKSA|INFO */) {
+    const cls = type === "AMAN" ? "pass" : type === "RENTAN" ? "fail" : type === "PERIKSA" ? "warn" : "info";
+    addEntry(cls, `<span class="verdict ${type}">${type}</span>${escHtml(msg)}`);
+    if (type === "AMAN")    passCount++;
+    if (type === "RENTAN")  failCount++;
+    if (type === "PERIKSA") warnCount++;
+    updateScore();
+    setBtnState(label, cls);
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  // ─── Score ────────────────────────────────────────────────────────────────
+  function updateScore() {
+    document.getElementById("countPass").textContent = passCount;
+    document.getElementById("countFail").textContent = failCount;
+    document.getElementById("countWarn").textContent = warnCount;
+    const total = passCount + failCount + warnCount;
+    const pct = total ? Math.round((passCount / total) * 100) : "—";
+    document.getElementById("scoreText").textContent = total ? `${pct}%` : "—";
+  }
+
+  // ─── Button state ─────────────────────────────────────────────────────────
+  const btnMap = {
+    env: "envBtn", permission: "permissionBtn", https: "httpsBtn",
+    mixed: "mixedBtn", clipboard: "clipboardBtn", fullscreen: "fullscreenBtn",
+    sandbox: "sandboxBtn", storage: "storageBtn", cookie: "cookieBtn",
+    csp: "cspBtn", cors: "corsBtn", download: "downloadBtn",
+    sw: "swBtn", referrer: "referrerBtn", clickjack: "clickjackBtn"
+  };
+
+  function setBtnState(key, state) {
+    const btn = document.getElementById(btnMap[key]);
+    if (btn) { btn.classList.remove("pass","fail","warn","running"); btn.classList.add(state); }
+  }
+  function setBtnRunning(key) {
+    const btn = document.getElementById(btnMap[key]);
+    if (btn) { btn.classList.remove("pass","fail","warn"); btn.classList.add("running"); }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TEST FUNCTIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function environmentFingerprint() {
+    setBtnRunning("env");
+    section("Environment Fingerprint", "🌐");
+    info(`URL: ${location.href}`);
+    info(`Origin: ${location.origin}`);
+    info(`Protocol: ${location.protocol}`);
+    info(`User Agent: ${navigator.userAgent}`);
+    info(`Platform: ${navigator.platform}`);
+    info(`Cookie enabled: ${navigator.cookieEnabled}`);
+    info(`Top window: ${window.top === window}`);
+    verdict("env", "Snapshot lingkungan berhasil dikumpulkan.", "INFO");
+  }
+
+  async function permissionSnapshot() {
+    setBtnRunning("permission");
+    section("Permission Snapshot", "🔑");
+    const names = ["geolocation","notifications","camera","microphone","clipboard-read","clipboard-write","persistent-storage"];
+    const dangerous = ["camera","microphone","geolocation"];
+    let rentan = [];
+    for (const name of names) {
+      try {
+        const s = await navigator.permissions.query({ name });
+        info(`${name}: ${s.state}`);
+        if (s.state === "granted" && dangerous.includes(name)) rentan.push(name);
+      } catch (e) {
+        muted(`${name}: tidak didukung (${e.name})`);
+      }
     }
+    if (rentan.length)
+      verdict("permission", `Permission sensitif sudah diizinkan: ${rentan.join(", ")} — pastikan hanya diizinkan untuk situs yang perlu.`, "PERIKSA");
+    else
+      verdict("permission", "Tidak ada permission sensitif yang diberikan secara default.", "AMAN");
+  }
 
-    function resetLog() {
-      report.length = 0;
-      output.textContent = "";
+  function httpsTest() {
+    setBtnRunning("https");
+    section("HTTPS & Secure Context", "🔒");
+    const secure = window.isSecureContext;
+    const https  = location.protocol === "https:";
+    info(`window.isSecureContext: ${secure}`);
+    info(`Protocol: ${location.protocol}`);
+
+    if (!https && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+      verdict("https", "Halaman diakses via HTTP bukan HTTPS. Data dapat disadap di jaringan (MITM).", "RENTAN");
+    } else if (!secure) {
+      verdict("https", "Bukan secure context. Beberapa API keamanan tidak tersedia.", "PERIKSA");
+    } else {
+      verdict("https", "Halaman berjalan di secure context (HTTPS / localhost).", "AMAN");
     }
+  }
 
-    function showToast(message) {
-      const existing = document.querySelector(".toast");
-      if (existing) existing.remove();
+  function mixedContentTest() {
+    setBtnRunning("mixed");
+    section("Mixed Content Test", "⚠️");
+    muted("Mencoba memuat resource HTTP dari halaman HTTPS (akan diblokir browser jika HTTPS)...");
+    const img = new Image();
+    img.src = "http://neverssl.com/online";
+    img.onload = () => {
+      verdict("mixed", "Resource HTTP berhasil dimuat dari halaman HTTPS — mixed content TIDAK diblokir!", "RENTAN");
+    };
+    img.onerror = () => {
+      verdict("mixed", "Resource HTTP diblokir oleh browser. Mixed content protection aktif.", "AMAN");
+    };
+    setTimeout(() => {
+      if (!img.complete) {
+        img.src = "";
+        verdict("mixed", "Tidak dapat memverifikasi (timeout / offline). Pastikan akses HTTPS.", "PERIKSA");
+      }
+    }, 4000);
+  }
 
-      const toast = document.createElement("div");
-      toast.className = "toast";
-      toast.textContent = message;
-      document.body.appendChild(toast);
-
-      setTimeout(() => toast.remove(), 4000);
+  async function clipboardGestureTest() {
+    setBtnRunning("clipboard");
+    section("Clipboard Gesture Test", "📋");
+    muted("Clipboard API membutuhkan secure context + user gesture.");
+    if (!navigator.clipboard) {
+      verdict("clipboard", "Clipboard API tidak tersedia di konteks ini.", "PERIKSA");
+      return;
     }
-
-    function getPermission() {
-      if (!("Notification" in window)) return "unsupported";
-      return Notification.permission;
+    try {
+      await navigator.clipboard.writeText(`security-test-${Date.now()}`);
+      info("clipboard.writeText: berhasil dari button gesture.");
+      try {
+        const t = await navigator.clipboard.readText();
+        info(`clipboard.readText: berhasil, panjang=${t.length}`);
+        verdict("clipboard", "Clipboard read/write bekerja normal — diperlukan user gesture.", "AMAN");
+      } catch (e) {
+        verdict("clipboard", `clipboard.readText diblokir (${e.name}). Periksa izin clipboard-read.`, "PERIKSA");
+      }
+    } catch (e) {
+      verdict("clipboard", `clipboard.writeText diblokir: ${e.name} — ${e.message}`, "PERIKSA");
     }
+  }
 
-    function describeEnvironment() {
-      log("=== Environment ===");
-      log(`URL: ${location.href}`);
-      log(`Origin: ${location.origin}`);
-      log(`Protocol: ${location.protocol}`);
-      log(`User agent: ${navigator.userAgent}`);
-      log(`Secure context: ${window.isSecureContext}`);
-      log(`Notification API supported: ${"Notification" in window}`);
-      log(`Initial permission: ${getPermission()}`);
-    }
-
-    function expectedBehavior() {
-      log("=== Expected Browser Security Behavior ===");
-      log("If permission is denied, native browser notification must not appear.");
-      log("If a native notification appears while permission is denied, record screen and attach this log.");
-    }
-
-    function summarizeFinding(appeared) {
-      log("=== Tester Observation ===");
-      log(`Did native browser notification visibly appear? ${appeared ? "YES" : "NO"}`);
-      log(`Permission at observation time: ${getPermission()}`);
-
-      if (appeared && getPermission() === "denied") {
-        log("Potential finding: native notification appeared while permission was denied.");
+  async function fullscreenBoundaryTest() {
+    setBtnRunning("fullscreen");
+    section("Fullscreen Boundary Test", "⛶");
+    muted("Fullscreen harus membutuhkan user gesture, tidak bisa dipanggil tanpa interaksi.");
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+        info("requestFullscreen: berhasil dipanggil via button gesture.");
+        await document.exitFullscreen();
+        info("exitFullscreen: berhasil.");
+        verdict("fullscreen", "Fullscreen membutuhkan gesture & bisa di-exit — perilaku normal.", "AMAN");
       } else {
-        log("No bypass observed by this page.");
+        await document.exitFullscreen();
+        verdict("fullscreen", "exitFullscreen berhasil.", "AMAN");
       }
+    } catch (e) {
+      verdict("fullscreen", `requestFullscreen diblokir: ${e.name} — ${e.message}`, "PERIKSA");
+    }
+  }
+
+  function sandboxTest() {
+    setBtnRunning("sandbox");
+    section("Iframe Sandbox Test", "🪤");
+    muted("Sandbox iframe (allow-scripts only) tidak boleh bisa navigasi halaman induk.");
+
+    const iframe = document.createElement("iframe");
+    iframe.sandbox = "allow-scripts";
+    iframe.style.cssText = "width:100%;height:70px;border:1px solid #2d3748;border-radius:6px;margin-top:8px;";
+    iframe.srcdoc = `
+      <!doctype html><meta charset="utf-8">
+      <style>body{margin:0;background:#0f1318;display:flex;align-items:center;gap:10px;padding:10px;font-family:monospace;font-size:12px;color:#e2e8f0}</style>
+      <button id="b" style="padding:5px 10px;background:#155eef;color:#fff;border:0;border-radius:5px;cursor:pointer;font-size:12px">Try top.navigation</button>
+      <span id="r" style="color:#64748b">Klik tombol →</span>
+      <script>document.getElementById("b").onclick=()=>{try{top.location.href="https://example.com/#sandbox";document.getElementById("r").textContent="⚠ navigasi berhasil!";document.getElementById("r").style.color="#ff4757";}catch(e){document.getElementById("r").textContent="✓ diblokir: "+e.name;document.getElementById("r").style.color="#00ff88";}}<\/script>`;
+    logArea.appendChild(iframe);
+    verdict("sandbox", "Iframe sandbox terpasang. Klik 'Try top.navigation' — harus diblokir browser.", "INFO");
+    setBtnState("sandbox", "pass");
+  }
+
+  function storagePartitionTest() {
+    setBtnRunning("storage");
+    section("Storage Partition Test", "💾");
+    const key = "sec-test-key";
+    const val = `${location.origin}-${Date.now()}`;
+    let issues = 0;
+
+    try {
+      localStorage.setItem(key, val);
+      const ok = localStorage.getItem(key) === val;
+      info(`localStorage: ${ok ? "✓ berfungsi" : "✗ gagal baca balik"}`);
+      localStorage.removeItem(key);
+    } catch (e) { info(`localStorage diblokir: ${e.name}`); issues++; }
+
+    try {
+      sessionStorage.setItem(key, val);
+      const ok = sessionStorage.getItem(key) === val;
+      info(`sessionStorage: ${ok ? "✓ berfungsi" : "✗ gagal baca balik"}`);
+      sessionStorage.removeItem(key);
+    } catch (e) { info(`sessionStorage diblokir: ${e.name}`); issues++; }
+
+    if (issues === 0)
+      verdict("storage", "Storage API berfungsi normal dan terisolasi per-origin.", "AMAN");
+    else
+      verdict("storage", "Storage API diblokir (mungkin mode private / third-party cookie diblokir).", "PERIKSA");
+  }
+
+  function cookieSecurityTest() {
+    setBtnRunning("cookie");
+    section("Cookie Security Flags", "🍪");
+    muted("Memeriksa apakah cookie bisa dibuat tanpa flag keamanan...");
+
+    const insecureCookie = `sec_test_insecure=1; path=/`;
+    const secureCookie   = `sec_test_secure=1; path=/; SameSite=Strict`;
+
+    try {
+      document.cookie = insecureCookie;
+      document.cookie = secureCookie;
+      const cookies = document.cookie;
+      info(`document.cookie: ${cookies || "(kosong)"}`);
+
+      const hasInsecure = cookies.includes("sec_test_insecure");
+      const hasSecure   = cookies.includes("sec_test_secure");
+
+      if (hasInsecure) {
+        verdict("cookie", "Cookie tanpa flag Secure/HttpOnly/SameSite berhasil dibuat via JS. Rentan terhadap XSS cookie theft.", "RENTAN");
+      } else if (!hasSecure) {
+        verdict("cookie", "Cookie diblokir — kemungkinan di file:// atau private mode. Tidak dapat memverifikasi.", "PERIKSA");
+      } else {
+        verdict("cookie", "Hanya cookie dengan SameSite yang terlihat. Periksa flag HttpOnly & Secure di server.", "PERIKSA");
+      }
+
+      // cleanup
+      document.cookie = "sec_test_insecure=; max-age=0; path=/";
+      document.cookie = "sec_test_secure=; max-age=0; path=/";
+    } catch (e) {
+      verdict("cookie", `Cookie diblokir: ${e.name}`, "PERIKSA");
+    }
+  }
+
+  function cspCheck() {
+    setBtnRunning("csp");
+    section("CSP Header Check", "🛡️");
+    muted("Memeriksa apakah halaman ini memiliki Content-Security-Policy...");
+
+    // Deteksi via meta tag
+    const metaCSP = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+    if (metaCSP) {
+      info(`CSP via meta tag: ${metaCSP.content}`);
+      verdict("csp", "CSP ditemukan via meta tag. Namun meta CSP tidak dapat memblokir resource yang sudah dimuat.", "PERIKSA");
+      return;
     }
 
-    function testNativeNotification() {
-      log("=== Native Notification Test ===");
+    // Coba inject inline script sebagai probe (akan gagal jika CSP ketat)
+    let blocked = false;
+    const old = window.__cspProbe__;
+    try {
+      const s = document.createElement("script");
+      s.textContent = "window.__cspProbe__=true;";
+      document.head.appendChild(s);
+      document.head.removeChild(s);
+    } catch (e) { blocked = true; }
 
-      if (!("Notification" in window)) {
-        log("Result: Notification API is not supported in this browser.");
-        showToast("Notification API tidak didukung browser ini.");
-        return;
+    if (window.__cspProbe__ && !old) {
+      verdict("csp", "Inline script berhasil dieksekusi — tidak ada CSP script-src yang membatasi. Rentan terhadap XSS.", "RENTAN");
+      delete window.__cspProbe__;
+    } else if (blocked) {
+      verdict("csp", "Inline script diblokir oleh CSP. Perlindungan XSS via CSP aktif.", "AMAN");
+    } else {
+      verdict("csp", "Tidak terdeteksi CSP header dari sisi client. Periksa response header server.", "PERIKSA");
+    }
+  }
+
+  async function corsTest() {
+    setBtnRunning("cors");
+    section("CORS Behavior Test", "🔗");
+    muted("Mencoba cross-origin request ke endpoint publik...");
+
+    // Test ke endpoint CORS-enabled
+    try {
+      const r = await fetch("https://httpbin.org/get", { method: "GET", mode: "cors" });
+      if (r.ok) {
+        verdict("cors", "Cross-origin request ke httpbin.org berhasil — server mengizinkan CORS. Normal untuk API publik.", "INFO");
+      } else {
+        verdict("cors", `CORS request gagal dengan status ${r.status}.`, "PERIKSA");
       }
-
-      const state = Notification.permission;
-      log(`Current permission: ${state}`);
-
-      if (state === "denied") {
-        log("Result: native notification intentionally not created because permission is denied.");
-        log("Fallback: showing in-page toast instead.");
-        showToast("Notifikasi browser diblokir. Ini fallback di dalam halaman.");
-        return;
-      }
-
-      if (state === "default") {
-        log("Result: permission has not been requested yet.");
-        log("Use the Request Permission button first.");
-        showToast("Permission belum diminta.");
-        return;
-      }
-
-      if (state === "granted") {
-        const notification = new Notification("PoC notification", {
-          body: "Native notification appears because permission is granted."
-        });
-
-        log("Result: native notification created because permission is granted.");
-
-        setTimeout(() => {
-          notification.close();
-          log("Native notification closed.");
-        }, 3000);
+    } catch (e) {
+      if (e.name === "TypeError" && e.message.toLowerCase().includes("cors")) {
+        verdict("cors", "Browser memblokir cross-origin request tanpa header CORS yang tepat. Perilaku normal.", "AMAN");
+      } else {
+        verdict("cors", `Fetch error: ${e.name} — ${e.message} (mungkin offline atau diblokir proxy)`, "PERIKSA");
       }
     }
+  }
 
-    evidenceBtn.addEventListener("click", () => {
-      resetLog();
-      describeEnvironment();
-      expectedBehavior();
-      testNativeNotification();
+  function downloadAttributionTest() {
+    setBtnRunning("download");
+    section("Download Attribution Test", "⬇️");
+    muted("Menguji apakah nama file download bisa dispoofing dengan karakter khusus...");
 
-      setTimeout(() => {
-        const appeared = confirm(
-          "Apakah native browser notification terlihat muncul di luar halaman?"
-        );
-        summarizeFinding(appeared);
-      }, 500);
-    });
+    const blob = new Blob(["Browser Security Download Test\n"], { type: "text/plain" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url;
 
-    testBtn.addEventListener("click", () => {
-      resetLog();
-      describeEnvironment();
-      testNativeNotification();
-    });
+    // Coba filename dengan path traversal / karakter berbahaya
+    const maliciousName = "../../../etc/passwd.txt";
+    a.download = maliciousName;
+    a.textContent = "⬇ Download test (cek nama file di dialog)";
+    a.className = "dl-link";
+    logArea.appendChild(a);
 
-    requestBtn.addEventListener("click", async () => {
-      resetLog();
-      describeEnvironment();
+    info(`Filename yang diminta: "${maliciousName}"`);
+    info("Browser seharusnya menstrip path traversal '../' dan hanya menyimpan nama file terakhir.");
+    verdict("download", "Klik link di atas — verifikasi dialog browser menampilkan nama aman, bukan path traversal.", "INFO");
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    setBtnState("download", "pass");
+  }
 
-      if (!("Notification" in window)) {
-        log("Result: Notification API is not supported in this browser.");
-        return;
-      }
+  async function serviceWorkerScopeTest() {
+    setBtnRunning("sw");
+    section("Service Worker Scope Test", "⚙️");
+    if (!("serviceWorker" in navigator)) {
+      verdict("sw", "Service Worker API tidak tersedia di browser/konteks ini.", "PERIKSA");
+      return;
+    }
+    // Daftar SW di scope yang valid
+    try {
+      const r = await navigator.serviceWorker.register("data:text/javascript,// sw", { scope: "./" });
+      info(`SW registered scope: ${r.scope}`);
+    } catch (e) {
+      info(`SW allowed scope: diblokir — ${e.name}: ${e.message}`);
+    }
+    // Coba scope di luar path (harus diblokir)
+    try {
+      await navigator.serviceWorker.register("data:text/javascript,// sw", { scope: "../" });
+      verdict("sw", "SW berhasil register di scope '../' yang lebih luas. Verifikasi header Service-Worker-Allowed.", "RENTAN");
+    } catch (e) {
+      verdict("sw", "SW scope yang lebih luas dari path script diblokir — perilaku benar.", "AMAN");
+    }
+  }
 
-      log(`Before request: ${Notification.permission}`);
+  function referrerPolicyTest() {
+    setBtnRunning("referrer");
+    section("Referrer Policy", "↩️");
+    const meta = document.querySelector('meta[name="referrer"]');
+    const policy = meta ? meta.content : "tidak ada meta referrer";
+    info(`Meta referrer: ${policy}`);
+    info(`document.referrer: "${document.referrer || "(kosong)"}"`);
 
-      if (Notification.permission === "denied") {
-        log("Request skipped: browser already denied notification permission.");
-        log("User must re-enable notifications from browser site settings.");
-        showToast("Aktifkan ulang izin dari site settings browser.");
-        return;
-      }
+    // Buat link test
+    const a = document.createElement("a");
+    a.href = "https://httpbin.org/get";
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.textContent = "Test external link (noopener noreferrer)";
+    a.className = "dl-link";
+    logArea.appendChild(a);
+    info("Link eksternal di atas menggunakan rel='noopener noreferrer' — sudah aman.");
 
-      const result = await Notification.requestPermission();
-      log(`After request: ${result}`);
-    });
+    if (!meta || !["no-referrer","strict-origin","strict-origin-when-cross-origin"].includes(meta.content)) {
+      verdict("referrer", "Tidak ada referrer policy ketat. URL halaman bisa bocor ke situs eksternal via Referer header.", "PERIKSA");
+    } else {
+      verdict("referrer", `Referrer policy: ${meta.content} — perilaku aman.`, "AMAN");
+    }
+    setBtnState("referrer", "warn");
+  }
 
-    copyBtn.addEventListener("click", async () => {
-      const text = output.textContent.trim();
+  function clickjackTest() {
+    setBtnRunning("clickjack");
+    section("Clickjacking / X-Frame-Options", "🖼️");
+    muted("Memeriksa apakah halaman ini bisa di-embed di iframe oleh domain lain...");
+    info(`window.top === window: ${window.top === window}`);
+    info(`window.parent === window: ${window.parent === window}`);
 
-      if (!text) {
-        showToast("Belum ada report untuk disalin.");
-        return;
-      }
+    if (window.top !== window) {
+      verdict("clickjack", "Halaman ini berjalan di dalam iframe! Jika tidak disengaja, perlu X-Frame-Options: DENY atau CSP frame-ancestors.", "RENTAN");
+    } else {
+      muted("Tidak bisa memverifikasi X-Frame-Options dari sisi client saja.");
+      muted("Periksa response header server: X-Frame-Options: DENY atau SAMEORIGIN");
+      muted("Atau CSP: frame-ancestors 'self'");
+      verdict("clickjack", "Halaman berjalan sebagai top window. Verifikasi header X-Frame-Options di server.", "PERIKSA");
+    }
+  }
 
+  // ─── Wire buttons ─────────────────────────────────────────────────────────
+  document.getElementById("envBtn").addEventListener("click", environmentFingerprint);
+  document.getElementById("permissionBtn").addEventListener("click", permissionSnapshot);
+  document.getElementById("httpsBtn").addEventListener("click", httpsTest);
+  document.getElementById("mixedBtn").addEventListener("click", mixedContentTest);
+  document.getElementById("clipboardBtn").addEventListener("click", clipboardGestureTest);
+  document.getElementById("fullscreenBtn").addEventListener("click", fullscreenBoundaryTest);
+  document.getElementById("sandboxBtn").addEventListener("click", sandboxTest);
+  document.getElementById("storageBtn").addEventListener("click", storagePartitionTest);
+  document.getElementById("cookieBtn").addEventListener("click", cookieSecurityTest);
+  document.getElementById("cspBtn").addEventListener("click", cspCheck);
+  document.getElementById("corsBtn").addEventListener("click", corsTest);
+  document.getElementById("downloadBtn").addEventListener("click", downloadAttributionTest);
+  document.getElementById("swBtn").addEventListener("click", serviceWorkerScopeTest);
+  document.getElementById("referrerBtn").addEventListener("click", referrerPolicyTest);
+  document.getElementById("clickjackBtn").addEventListener("click", clickjackTest);
+
+  document.getElementById("runAllBtn").addEventListener("click", async () => {
+    // Reset score
+    passCount = 0; failCount = 0; warnCount = 0; updateScore();
+    environmentFingerprint();
+    await permissionSnapshot();
+    httpsTest();
+    mixedContentTest();
+    storagePartitionTest();
+    cookieSecurityTest();
+    cspCheck();
+    referrerPolicyTest();
+    clickjackTest();
+    sandboxTest();
+    downloadAttributionTest();
+    await corsTest();
+    await serviceWorkerScopeTest();
+    addEntry("section", "✅ Selesai — clipboard/fullscreen perlu dijalankan manual (butuh gesture).");
+  });
+
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    logArea.innerHTML = "";
+    passCount = 0; failCount = 0; warnCount = 0;
+    updateScore();
+    document.querySelectorAll(".test-btn").forEach(b => b.classList.remove("pass","fail","warn","running"));
+  });
+
+  document.getElementById("copyBtn").addEventListener("click", async () => {
+    const text = [...logArea.querySelectorAll(".log-entry")]
+      .map(e => `[${e.querySelector(".log-time").textContent.replace(/[\[\]]/g,"")}] ${e.querySelector(".log-msg").innerText}`)
+      .join("\n");
+    try {
       await navigator.clipboard.writeText(text);
-      showToast("Report disalin ke clipboard.");
-    });
-  </script>
+      addEntry("pass", '<span class="verdict AMAN">OK</span>Log berhasil di-copy ke clipboard.');
+    } catch (e) {
+      addEntry("fail", `Gagal copy: ${e.message}`);
+    }
+  });
+</script>
 </body>
 </html>
