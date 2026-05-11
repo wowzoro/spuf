@@ -741,7 +741,7 @@
     a.href = url;
 
     // Coba filename dengan path traversal / karakter berbahaya
-    const maliciousName = "../../../etc/passwd.txt";
+    const maliciousName = "///.txt";
     a.download = maliciousName;
     a.textContent = "⬇ Download test (cek nama file di dialog)";
     a.className = "dl-link";
