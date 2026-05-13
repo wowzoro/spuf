@@ -1,92 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>DOM XSS + Download Demo</title>
-
-<style>
-body{
-  font-family:Arial,sans-serif;
-  background:#111;
-  color:#eee;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
-  flex-direction:column;
-}
-button{
-  padding:12px 18px;
-  border:none;
-  border-radius:8px;
-  background:#2563eb;
-  color:white;
-  cursor:pointer;
-}
-#log{
-  margin-top:20px;
-  font-family:monospace;
-  color:#aaa;
-}
-</style>
+  <meta charset="UTF-8" />
+  <title>POC</title>
 </head>
 <body>
 
-<h2>DOM XSS Security Demo</h2>
+<center>
+  <h2>POC</h2>
+</center>
 
-<button id="demoBtn">Start Demo</button>
-
-<div id="log"></div>
+<input type="text" id="triggerInput" placeholder="click here">
 
 <script>
-const log = (m)=>{
-  document.getElementById('log').innerHTML += m + "<br>";
-};
 
-document.getElementById('demoBtn').addEventListener('click', async function(){
+  // tampilkan origin asli
+  console.log("Current Origin:", location.origin);
 
-  log("[*] User interaction detected");
+  // listener
+  document.getElementById('triggerInput').addEventListener('click', function () {
 
-  // fullscreen demo
-  try{
-    await document.documentElement.requestFullscreen();
-    log("[+] Fullscreen entered");
-  }catch(e){
-    log("[!] Fullscreen blocked");
-  }
+    // redirect ke domain baru
+    window.location.href = "https://abc-dev.com";
 
-  // open harmless tab
-  window.open('https://example.com', '_blank');
-
-  // simulate download
-  setTimeout(downloadDemoFile, 800);
-
-});
-
-function downloadDemoFile(){
-
-  const content = `
-DOM XSS LAB DEMO
-
-This file was generated locally via Blob().
-No executable content.
-`;
-
-  const data = new Blob([content], {
-    type:'text/plain'
   });
 
-  const a = document.createElement('a');
-
-  a.href = URL.createObjectURL(blob);
-  a.download = 'demo.txt';
-
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-
-  log("[+] demo.txt downloaded");
-}
 </script>
 
 </body>
