@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DOM XSS Lab — target.com</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f0f; color: #e0e0e0; min-height: 100vh; }
+  
+  .topbar { background: #1a1a1a; border-bottom: 1px solid #2a2a2a; padding: 12px 20px; display: flex; align-items: center; gap: 12px; }
+  .logo { font-size: 13px; font-weight: 600; color: #e24b4a; font-family: monospace; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #2a1a1a; color: #e24b4a; border: 1px solid #e24b4a44; }
+
+  .main { display: grid; grid-template-columns: 340px 1fr; height: calc(100vh - 49px); }
+
+  /* LEFT PANEL */
+  .left { background: #141414; border-right: 1px solid #222; display: flex; flex-direction: column; overflow: hidden; }
+  .panel-title { font-size: 11px; font-weight: 600; color: #666; letter-spacing: .08em; text-transform: uppercase; padding: 14px 16px 8px; }
+  
+  .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; padding: 0 16px 12px; }
+  .stat { background: #1a1a1a; border-radius: 8px; padding: 10px 8px; text-align: center; border: 1px solid #222; }
+  .stat-n { font-size: 20px; font-weight: 600; }
+  .stat-n.r { color: #e24b4a; } .stat-n.g { color: #57a64a; } .stat-n.w { color: #ccc; }
+  .stat-l { font-size: 10px; color: #555; margin-top: 2px; }
+
+  .payload-editor { padding: 0 16px 12px; }
+  .field-label { font-size: 11px; color: #555; margin-bottom: 6px; }
+  textarea#payload {
+    width: 100%; height: 72px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px;
+    color: #e0e0e0; font-family: monospace; font-size: 12px; padding: 10px; resize: vertical; outline: none;
+  }
+  textarea#payload:focus { border-color: #444; }
+  .run-btn {
+    width: 100%; margin-top: 8px; padding: 10px; background: #185FA5; color: #fff;
+    border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .run-btn:hover { background: #1a72c4; }
+
+  .divider { height: 1px; background: #222; margin: 0 16px 12px; }
+
+  .chips-wrap { padding: 0 16px; flex: 1; overflow-y: auto; }
+  .chip-group { margin-bottom: 12px; }
+  .chip-group-title { font-size: 10px; color: #555; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px; }
+  .chip {
+    display: block; width: 100%; text-align: left; font-family: monospace; font-size: 11px;
+    padding: 6px 10px; border-radius: 6px; border: 1px solid; cursor: pointer; background: transparent;
+    margin-bottom: 4px; transition: background .1s;
+  }
+  .chip.red { color: #e24b4a; border-color: #e24b4a33; }
+  .chip.red:hover { background: #e24b4a18; }
+  .chip.amber { color: #c8850a; border-color: #c8850a33; }
+  .chip.amber:hover { background: #c8850a18; }
+  .chip.green { color: #57a64a; border-color: #57a64a33; }
+  .chip.green:hover { background: #57a64a18; }
+
+  /* RIGHT PANEL */
+  .right { display: flex; flex-direction: column; overflow: hidden; }
+
+  .browser-chrome { background: #1e1e1e; border-bottom: 1px solid #2a2a2a; padding: 10px 14px; }
+  .chrome-row1 { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .wdots { display: flex; gap: 5px; }
+  .wdot { width: 12px; height: 12px; border-radius: 50%; }
+  .chrome-tabs { display: flex; gap: 2px; }
+  .chrome-tab { font-size: 11px; padding: 4px 14px; background: #2a2a2a; border-radius: 6px 6px 0 0; color: #999; border: 1px solid #333; border-bottom: none; }
+  .chrome-tab.active { background: #141414; color: #e0e0e0; border-color: #444; }
+  .chrome-row2 { display: flex; align-items: center; gap: 8px; }
+  .addr-bar {
+    flex: 1; background: #141414; border: 1px solid #333; border-radius: 20px;
+    padding: 5px 14px; font-family: monospace; font-size: 12px; color: #aaa;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .addr-secure { color: #57a64a; font-size: 12px; }
+  .addr-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .viewport { flex: 1; background: #fff; overflow: hidden; position: relative; }
+  #lab-frame { width: 100%; height: 100%; border: none; display: block; }
+
+  .bottom { background: #141414; border-top: 1px solid #222; height: 180px; display: flex; flex-direction: column; }
+  .console-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-bottom: 1px solid #222; }
+  .console-title { font-size: 11px; color: #555; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  .console-clear { font-size: 11px; color: #444; background: none; border: none; cursor: pointer; }
+  .console-clear:hover { color: #888; }
+  .console-log { flex: 1; overflow-y: auto; padding: 6px 14px; font-family: monospace; font-size: 12px; line-height: 1.7; }
+  .ll { display: flex; gap: 10px; }
+  .lt { color: #3a3a3a; } .lx { color: #e24b4a; font-weight: 600; } .li { color: #555; } .lo { color: #57a64a; } .lw { color: #c8850a; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="logo">[ DOM XSS Lab ]</span>
+  <span class="badge">educational</span>
+  <span style="font-size:12px;color:#444;margin-left:auto;">innerHTML sink · location.hash source</span>
+</div>
+
+<div class="main">
+  <!-- LEFT -->
+  <div class="left">
+    <div class="panel-title">Stats</div>
+    <div class="stats">
+      <div class="stat"><div class="stat-n r" id="cxss">0</div><div class="stat-l">triggered</div></div>
+      <div class="stat"><div class="stat-n w" id="ctot">0</div><div class="stat-l">total</div></div>
+      <div class="stat"><div class="stat-n g" id="csaf">0</div><div class="stat-l">safe</div></div>
+    </div>
+
+    <div class="payload-editor">
+      <div class="field-label">Payload (diinject ke innerHTML)</div>
+      <textarea id="payload">&lt;img src=x onerror=alert(document.domain)&gt;</textarea>
+      <button class="run-btn" onclick="run()">▶ Inject &amp; Run</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="chips-wrap">
+      <div class="chip-group">
+        <div class="chip-group-title">Event handler XSS</div>
+        <button class="chip red" onclick="s(`&lt;img src=x onerror=alert(document.domain)&gt;`)">img onerror → document.domain</button>
+        <button class="chip red" onclick="s(`&lt;img src=x onerror=alert(document.cookie)&gt;`)">img onerror → document.cookie</button>
+        <button class="chip red" onclick="s(`&lt;svg onload=alert(window.origin)&gt;`)">svg onload → window.origin</button>
+        <button class="chip red" onclick="s(`&lt;svg onload=alert(location.href)&gt;`)">svg onload → location.href</button>
+        <button class="chip red" onclick="s(`&lt;details open ontoggle=alert('ontoggle XSS')&gt;`)">details ontoggle</button>
+        <button class="chip red" onclick="s(`&lt;video src onerror=alert('video XSS')&gt;`)">video onerror</button>
+        <button class="chip red" onclick="s(`&lt;input autofocus onfocus=alert('onfocus XSS')&gt;`)">input autofocus onfocus</button>
+        <button class="chip red" onclick="s(`&lt;body onload=alert('body onload')&gt;`)">body onload</button>
+        <button class="chip red" onclick="s(`&lt;iframe onload=alert('iframe XSS')&gt;&lt;/iframe&gt;`)">iframe onload</button>
+        <button class="chip red" onclick="s(`&lt;marquee onstart=alert('marquee')&gt;XSS&lt;/marquee&gt;`)">marquee onstart</button>
+      </div>
+      <div class="chip-group">
+        <div class="chip-group-title">Blocked by browser (educational)</div>
+        <button class="chip amber" onclick="s(`&lt;script&gt;alert(1)&lt;/script&gt;`)">script tag — blocked via innerHTML</button>
+        <button class="chip amber" onclick="s(`&lt;a href=javascript:alert(1)&gt;klik sini&lt;/a&gt;`)">javascript: href — klik dulu</button>
+      </div>
+      <div class="chip-group">
+        <div class="chip-group-title">Safe — tidak trigger XSS</div>
+        <button class="chip green" onclick="s(`Hello &lt;b&gt;World&lt;/b&gt;`)">bold text</button>
+        <button class="chip green" onclick="s(`&lt;p style='color:blue'&gt;styled paragraph&lt;/p&gt;`)">inline style</button>
+        <button class="chip green" onclick="s(`&lt;img src='https://picsum.photos/100/60'&gt;`)">img dengan src valid</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right">
+    <div class="browser-chrome">
+      <div class="chrome-row1">
+        <div class="wdots">
+          <span class="wdot" style="background:#FF5F57"></span>
+          <span class="wdot" style="background:#FFBD2E"></span>
+          <span class="wdot" style="background:#28CA41"></span>
+        </div>
+        <div class="chrome-tabs">
+          <div class="chrome-tab active">target.com</div>
+        </div>
+      </div>
+      <div class="chrome-row2">
+        <div class="addr-bar">
+          <span class="addr-secure">🔒</span>
+          <span class="addr-text" id="addrbar">https://target.com/page</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="viewport">
+      <iframe id="lab-frame" src="about:blank"></iframe>
+    </div>
+
+    <div class="bottom">
+      <div class="console-bar">
+        <span class="console-title">Console</span>
+        <button class="console-clear" onclick="clearLog()">clear</button>
+      </div>
+      <div class="console-log" id="log"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var cxss=0, ctot=0;
+
+function upd(){
+  document.getElementById('cxss').textContent=cxss;
+  document.getElementById('ctot').textContent=ctot;
+  document.getElementById('csaf').textContent=Math.max(0,ctot-cxss);
+}
+
+function s(v){ document.getElementById('payload').value=v; run(); }
+function clearLog(){ document.getElementById('log').innerHTML=''; }
+
+function addLog(msg,type){
+  var el=document.getElementById('log');
+  var t=new Date().toTimeString().slice(0,8);
+  var d=document.createElement('div');
+  d.className='ll';
+  d.innerHTML='<span class="lt">'+t+'</span><span class="l'+type+'">'+msg+'</span>';
+  el.appendChild(d);
+  el.scrollTop=el.scrollHeight;
+}
+
+function run(){
+  var payload=document.getElementById('payload').value;
+  document.getElementById('addrbar').textContent='https://target.com/page#'+payload;
+  ctot++; upd();
+  addLog('injecting: '+payload.slice(0,80)+(payload.length>80?'…':''), 'i');
+
+  var html=`<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { font-family: -apple-system, sans-serif; padding: 20px; background: #fff; color: #111; font-size: 14px; }
+  h3 { font-size: 13px; color: #888; font-weight: normal; margin-bottom: 8px; }
+  #sink { padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; min-height: 40px; background: #fafafa; }
+  .code { font-family: monospace; background: #f4f4f4; padding: 8px 12px; border-radius: 6px; font-size: 12px; color: #444; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+  <div class="code">document.getElementById("sink").innerHTML = location.hash.substring(1)</div>
+  <h3>innerHTML output:</h3>
+  <div id="sink"></div>
+<script>
+  // Simulasi vulnerable code
+  var hash = decodeURIComponent(location.hash.substring(1));
+  document.getElementById('sink').innerHTML = hash;
+<\/script>
+</body>
+</html>`;
+
+  var encoded = encodeURIComponent(payload);
+  var blob = new Blob([html], {type:'text/html'});
+  var blobUrl = URL.createObjectURL(blob);
+  document.getElementById('lab-frame').src = blobUrl + '#' + encoded;
+
+  // Override alert di iframe setelah load
+  var frame = document.getElementById('lab-frame');
+  frame.onload = function(){
+    try {
+      var win = frame.contentWindow;
+      var triggered = false;
+
+      win.alert = function(msg){
+        triggered = true;
+        cxss++; upd();
+        var m = String(msg);
+        addLog('XSS! alert("'+m+'")', 'x');
+        alert('[XSS TRIGGERED]\n\nalert("'+m+'")\n\nPayload berhasil mengeksekusi JavaScript!');
+      };
+      win.confirm = function(msg){
+        triggered = true;
+        cxss++; upd();
+        addLog('XSS! confirm("'+String(msg)+'")', 'x');
+        return confirm('[XSS] confirm: '+String(msg));
+      };
+      win.prompt = function(msg){
+        triggered = true;
+        cxss++; upd();
+        addLog('XSS! prompt("'+String(msg)+'")', 'x');
+        return prompt('[XSS] prompt: '+String(msg));
+      };
+
+      // Re-inject payload setelah override alert
+      var hash = decodeURIComponent(encoded);
+      win.document.getElementById('sink').innerHTML = hash;
+
+      setTimeout(function(){
+        if(!triggered){
+          addLog('no JS executed — safe or blocked by browser', 'o');
+        }
+      }, 500);
+
+    } catch(e) {
+      addLog('error: '+e.message, 'w');
+    }
+  };
+}
+
+run();
+</script>
+</body>
+</html>
